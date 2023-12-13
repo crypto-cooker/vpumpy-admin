@@ -20,6 +20,7 @@ type Props = {
 function StakingForm({ venomConnect, address, provider }: Props) {
   const [depositTokenAmount, setDepositTokenAmount] = useState<number | undefined>();
   const [withdrawTokenAmount, setWithdrawTokenAmount] = useState<number | undefined>();
+  const [newOwner, setNewOwner] = useState<string | undefined>();
   const [stakingContract, setStakingContract] = useState<any>();
   const [tokenRootContract, setTokenRootContract] = useState<any>();
   const [tokenWalletContract, setTokenWalletContract] = useState<any>();
@@ -40,6 +41,11 @@ function StakingForm({ venomConnect, address, provider }: Props) {
   const onChangeWithdrawAmount = (e: string) => {
     if (e === "") setWithdrawTokenAmount(undefined);
     setWithdrawTokenAmount(Number(e));
+  };
+
+  const onChangeNewOwner = (e: string) => {
+    if (e === "") setNewOwner(undefined);
+    setNewOwner(e);
   };
 
   useEffect(()=> {
@@ -112,7 +118,7 @@ function StakingForm({ venomConnect, address, provider }: Props) {
     }
   }
 
-  const stakeTokens = async () => {
+  const depositTokens = async () => {
     if (!venomConnect || !address || !depositTokenAmount || !provider || !tokenWalletContract) return;
     const amount = new BigNumber(depositTokenAmount).multipliedBy(10 ** 9).toString(); // Contract"s rate parameter is 1 venom = 10 tokens
     try {
@@ -141,20 +147,41 @@ function StakingForm({ venomConnect, address, provider }: Props) {
       console.error(e);
     }
   };
-  const unstakeTokens = async () => {
-    if (!venomConnect || !address || !withdrawTokenAmount || !provider || !tokenWalletContract) return;
-    const amount = new BigNumber(withdrawTokenAmount).multipliedBy(10 ** 9).toString(); // Contract"s rate parameter is 1 venom = 10 tokens
+  const transferOwner = async () => {
+    if (!venomConnect || !address || !newOwner) return;
     try {
-      setIsUnstaking(true);
+      setIsClaiming(true);
       const result = await stakingContract.methods
-        .unstake({amount:amount})
+        .transferOwnership({newOwner:newOwner})
         .send({
           from: new Address(address),
           amount: new BigNumber(0.5).multipliedBy(10 ** 9).toString(),
           bounce: true,
         });
       if (result?.id?.lt && result?.endStatus === "active") {
-        alert("Successfully unstaked token!");
+        alert("Successfully transferred ownership!");
+        setIsClaiming(false);
+        await getStakingInfo();
+      }
+    } catch (e) {
+      setIsClaiming(false);
+      console.error(e);
+    }
+  };
+  const withdrawTokens = async () => {
+    if (!venomConnect || !address || !withdrawTokenAmount || !provider || !tokenWalletContract) return;
+    const amount = new BigNumber(withdrawTokenAmount).multipliedBy(10 ** 9).toString(); // Contract"s rate parameter is 1 venom = 10 tokens
+    try {
+      setIsUnstaking(true);
+      const result = await stakingContract.methods
+        .withdraw({amount:amount})
+        .send({
+          from: new Address(address),
+          amount: new BigNumber(0.5).multipliedBy(10 ** 9).toString(),
+          bounce: true,
+        });
+      if (result?.id?.lt && result?.endStatus === "active") {
+        alert("Successfully withdrawed token!");
         setIsUnstaking(false);
         await getStakingInfo();
       }
@@ -201,7 +228,7 @@ function StakingForm({ venomConnect, address, provider }: Props) {
           }}
         />
       </div>
-      <a className={(!depositTokenAmount || isStaking ) ? "btn disabled" : "btn"} onClick={stakeTokens} >
+      <a className={(!depositTokenAmount || isStaking ) ? "btn disabled" : "btn"} onClick={depositTokens} >
         Deposit
       </a>
 
@@ -217,12 +244,24 @@ function StakingForm({ venomConnect, address, provider }: Props) {
           }}
         />
       </div>
-      <a className={!withdrawTokenAmount || isUnstaking || !unstakable ? "btn btn_unstake disabled" : "btn btn_unstake"} onClick={unstakeTokens}>
+      <a className={!withdrawTokenAmount || isUnstaking || !unstakable ? "btn btn_unstake disabled" : "btn btn_unstake"} onClick={withdrawTokens}>
         Withdraw
       </a>
+
+      <div className="number" style={{marginTop:"20px", marginBottom:"20px"}}>
+        <input
+          type="text"
+          value={newOwner !== undefined ? newOwner : ""}
+          style={{textAlign: "right"}}
+          placeholder="Enter New Owner Address"
+          onChange={(e) => {
+            onChangeNewOwner(e.target.value);
+          }}
+        />
+      </div>
       <div className="card__amount">
-        <a className={isClaiming || stakedAmount==0 ? "btn btn_claim disabled" : "btn btn_claim"} onClick={claimTokens}>
-          Claim Reward
+        <a className={isClaiming || newOwner==undefined ? "btn btn_claim disabled" : "btn btn_claim"} onClick={transferOwner}>
+          Transfer Ownership
         </a>
       </div>
     </>
