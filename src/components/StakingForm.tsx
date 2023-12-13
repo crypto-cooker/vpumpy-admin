@@ -24,12 +24,10 @@ function StakingForm({ venomConnect, address, provider }: Props) {
   const [stakingContract, setStakingContract] = useState<any>();
   const [tokenRootContract, setTokenRootContract] = useState<any>();
   const [tokenWalletContract, setTokenWalletContract] = useState<any>();
-  const [stakedAmount, setStakedAmount] = useState(0);
   const [stakingAddress, setStakingAddress] = useState(STAKING_ADDR);
   const [isStaking, setIsStaking] = useState(false);
   const [isClaiming, setIsClaiming] = useState(false);
   const [isUnstaking, setIsUnstaking] = useState(false);
-  const [unstakable, setUnstakable] = useState(true);
   const [totalStakedNftCount, setTotalStakedNFTCount] = useState(0);
   const [totalStakedAmount, setTotalStakedAmount] = useState(0);
   const [stakes, setStakes] = useState([]);
@@ -244,7 +242,7 @@ function StakingForm({ venomConnect, address, provider }: Props) {
           }}
         />
       </div>
-      <a className={!withdrawTokenAmount || isUnstaking || !unstakable ? "btn btn_unstake disabled" : "btn btn_unstake"} onClick={withdrawTokens}>
+      <a className={!withdrawTokenAmount || isUnstaking ? "btn btn_unstake disabled" : "btn btn_unstake"} onClick={withdrawTokens}>
         Withdraw
       </a>
 
