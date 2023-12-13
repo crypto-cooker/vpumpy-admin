@@ -86,10 +86,6 @@ function Main() {
               <img src={logo} alt="Logo" />
             </a>
             <div className="menu-section">
-              {/* <Link className='nav-menu' to="/">HOME</Link> */}
-              <Link className='nav-menu' to="/">VPUMPY STAKING</Link>
-              <Link className='nav-menu' to='/nft_staking'>NFT STAKING</Link>
-              <Link className='nav-menu' to='/leaderboard'>LEADERBOARD</Link>
               {!address &&
               <a className="logout" onClick={onConnect}>
                 CONNECT
@@ -118,18 +114,6 @@ function Main() {
               }
             >
               <ul>
-                <li>
-                  {/* <Link to="/home">HOME</Link> */}
-                </li>
-                <li>
-                  <Link to="/">VPUMPY STAKING</Link>
-                </li>
-                <li>
-                  <Link to="/nft_staking">NFT STAKING</Link>
-                </li>
-                <li>
-                  <Link to="/leaderboard">LEADERBOARD</Link>
-                </li>
                 <li>
                 {!address &&
                   <a className="logout" onClick={onConnect}>

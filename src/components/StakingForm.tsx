@@ -18,24 +18,28 @@ type Props = {
 };
 
 function StakingForm({ venomConnect, address, provider }: Props) {
-  const [tokenAmount, setTokenAmount] = useState<number | undefined>();
+  const [depositTokenAmount, setDepositTokenAmount] = useState<number | undefined>();
+  const [withdrawTokenAmount, setWithdrawTokenAmount] = useState<number | undefined>();
   const [stakingContract, setStakingContract] = useState<any>();
   const [tokenRootContract, setTokenRootContract] = useState<any>();
   const [tokenWalletContract, setTokenWalletContract] = useState<any>();
-  const [tvl, setTvl] = useState(0);
-  const [tokenBalance, setTokenBalance] = useState(0);
   const [stakedAmount, setStakedAmount] = useState(0);
-  const [claimedAmount, setClaimedAmount] = useState(0);
-  const [rewardAmount, setRewardAmount] = useState(0);
   const [stakingAddress, setStakingAddress] = useState(STAKING_ADDR);
   const [isStaking, setIsStaking] = useState(false);
   const [isClaiming, setIsClaiming] = useState(false);
   const [isUnstaking, setIsUnstaking] = useState(false);
   const [unstakable, setUnstakable] = useState(true);
-  const [stakedNFTs, setStakedNFTs] = useState([]);
-  const onChangeAmount = (e: string) => {
-    if (e === "") setTokenAmount(undefined);
-    setTokenAmount(Number(e));
+  const [totalStakedNftCount, setTotalStakedNFTCount] = useState(0);
+  const [totalStakedAmount, setTotalStakedAmount] = useState(0);
+  const [stakes, setStakes] = useState([]);
+  const onChangeDepositAmount = (e: string) => {
+    if (e === "") setDepositTokenAmount(undefined);
+    setDepositTokenAmount(Number(e));
+  };
+
+  const onChangeWithdrawAmount = (e: string) => {
+    if (e === "") setWithdrawTokenAmount(undefined);
+    setWithdrawTokenAmount(Number(e));
   };
 
   useEffect(()=> {
@@ -66,27 +70,15 @@ function StakingForm({ venomConnect, address, provider }: Props) {
   
   const getStakingInfo = async () => {
     try {
-      const { value0 } = await stakingContract.methods
-      .getStakedInfo({staker: address})
-      .call({});
-      setStakedAmount(parseFloat(value0.amount)/(10**9));
-      setClaimedAmount(parseFloat(value0.claimedAmount)/(10**9));
-      setStakedNFTs(value0.nfts);
-      //setRewardAmount()
-      const { totalStakedAmount } = await stakingContract.methods
-      .totalStakedAmount({})
-      .call({});
-      setTvl(parseFloat(totalStakedAmount)/(10**9));
-      const tokenBal = await tokenWalletContract.methods.balance({answerId: 0} as never).call();
-      setTokenBalance(parseFloat((tokenBal.value0/(10**9)).toFixed(2)));
-
-      const result = (await stakingContract.methods.getRewardAmount({staker: address}).call()).value0;
-      console.log(result);
-      setRewardAmount(result/(10**9));
-      
-      const res = await stakingContract.methods.unstakable({staker: address}).call();
-      setUnstakable(res.value0);
-      console.log(res);
+      const { totalStakedNftCount } = await stakingContract.methods
+        .totalStakedNftCount({}).call();
+        setTotalStakedNFTCount(totalStakedNftCount);
+        const { totalStakedAmount } = await stakingContract.methods
+        .totalStakedAmount({}).call();
+        setTotalStakedAmount(totalStakedAmount);
+      const { stakes } = await stakingContract.methods
+        .stakes({}).call();
+        setStakes(stakes);
     } catch (error) {
       console.log(error, "GREAT")
     }
@@ -121,8 +113,8 @@ function StakingForm({ venomConnect, address, provider }: Props) {
   }
 
   const stakeTokens = async () => {
-    if (!venomConnect || !address || !tokenAmount || !provider || !tokenWalletContract) return;
-    const amount = new BigNumber(tokenAmount).multipliedBy(10 ** 9).toString(); // Contract"s rate parameter is 1 venom = 10 tokens
+    if (!venomConnect || !address || !depositTokenAmount || !provider || !tokenWalletContract) return;
+    const amount = new BigNumber(depositTokenAmount).multipliedBy(10 ** 9).toString(); // Contract"s rate parameter is 1 venom = 10 tokens
     try {
       setIsStaking(true);
       const result = await tokenWalletContract.methods
@@ -131,7 +123,7 @@ function StakingForm({ venomConnect, address, provider }: Props) {
           recipient: stakingAddress,
           deployWalletValue: "0",
           remainingGasTo: address,
-          notify: true,
+          notify: false,
           payload: null
         })
         .send({
@@ -140,8 +132,7 @@ function StakingForm({ venomConnect, address, provider }: Props) {
           bounce: true,
         });
         if (result?.id?.lt && result?.endStatus === "active") {
-        console.log(result)
-        alert("Successfully staked token!");
+        alert("Successfully deposited token!");
         setIsStaking(false);
         await getStakingInfo();
       }
@@ -151,8 +142,8 @@ function StakingForm({ venomConnect, address, provider }: Props) {
     }
   };
   const unstakeTokens = async () => {
-    if (!venomConnect || !address || !tokenAmount || !provider || !tokenWalletContract) return;
-    const amount = new BigNumber(tokenAmount).multipliedBy(10 ** 9).toString(); // Contract"s rate parameter is 1 venom = 10 tokens
+    if (!venomConnect || !address || !withdrawTokenAmount || !provider || !tokenWalletContract) return;
+    const amount = new BigNumber(withdrawTokenAmount).multipliedBy(10 ** 9).toString(); // Contract"s rate parameter is 1 venom = 10 tokens
     try {
       setIsUnstaking(true);
       const result = await stakingContract.methods
@@ -174,59 +165,61 @@ function StakingForm({ venomConnect, address, provider }: Props) {
   };
   return (
     <>
-      <h1>Stake and Earn More Venompumpy</h1>
+      <h1>Venompumpy Admin Panel</h1>
       <div className="tvl_apy">
-        <div className="item-info">
-          <div style={{textAlign:"center"}}>
-            <b>TVL</b><br />
-            <b>{tvl}</b>
-          </div>
-          <div style={{textAlign:"center"}}>
-            <b>APY</b><br />
-            <b>{50 + stakedNFTs.length*50 + "%"}</b>
-          </div>
+        <div style={{textAlign:"center"}}>
+          <b>Total number wallet address that staked </b><br />
+          <b style={{fontSize: "25px"}}>{stakes?.length}</b>
         </div>
       </div>
-      <div className="balance">
-        <div className="item-info item-info-balance">
-          <div style={{textAlign:"center", fontSize: 30}}>
-            <b>{tokenBalance}</b><br />
-            <b style={{fontSize: 17}}>VenomPumpy Owned</b>
-          </div>
+      <div style={{marginTop: '20px'}}></div>
+      <div className="tvl_apy">
+        <div style={{textAlign:"center"}}>
+          <b>Total number of NFTs staked </b><br />
+          <b style={{fontSize: "25px"}}>{totalStakedNftCount}</b>
         </div>
       </div>
-      <div className="staked_reward">
-        <div className="item-info">
-          <div style={{textAlign:"center"}}>
-            <b>STAKED</b><br />
-            <b>{stakedAmount}</b>
-          </div>
-          <div style={{textAlign:"center"}}>
-            <b>REWARD</b><br />
-            <b>{rewardAmount}</b>
-          </div>
+      <div style={{marginTop: '20px'}}></div>
+
+      <div className="tvl_apy">
+        <div style={{textAlign:"center"}}>
+          <b>Total number of VenomPumpy Token staked </b><br />
+          <b style={{fontSize: "25px"}}>{totalStakedAmount/10**9}</b>
         </div>
       </div>
-      <div className="number">
+      <div style={{marginTop: '20px'}}></div>
+      
+      <div className="number" style={{marginBottom:"20px"}}>
         <input
           type="number"
           min={0}
-          value={tokenAmount !== undefined ? tokenAmount : ""}
+          value={depositTokenAmount !== undefined ? depositTokenAmount : ""}
           style={{textAlign: "right"}}
-          placeholder="Enter amount to stake or unstake"
+          placeholder="Enter amount to deposit"
           onChange={(e) => {
-            onChangeAmount(e.target.value);
+            onChangeDepositAmount(e.target.value);
           }}
         />
       </div>
-      <div className="card__amount">
-        <a className={(!tokenAmount || isStaking ) ? "btn disabled" : "btn"} onClick={stakeTokens}>
-          Stake
-        </a>
-        <a className={(!tokenAmount || tokenAmount>=stakedAmount) || isUnstaking || !unstakable ? "btn btn_unstake disabled" : "btn btn_unstake"} onClick={unstakeTokens}>
-          Unstake
-        </a>
+      <a className={(!depositTokenAmount || isStaking ) ? "btn disabled" : "btn"} onClick={stakeTokens} >
+        Deposit
+      </a>
+
+      <div className="number" style={{marginTop:"20px", marginBottom:"20px"}}>
+        <input
+          type="number"
+          min={0}
+          value={withdrawTokenAmount !== undefined ? withdrawTokenAmount : ""}
+          style={{textAlign: "right"}}
+          placeholder="Enter amount to withdraw"
+          onChange={(e) => {
+            onChangeWithdrawAmount(e.target.value);
+          }}
+        />
       </div>
+      <a className={!withdrawTokenAmount || isUnstaking || !unstakable ? "btn btn_unstake disabled" : "btn btn_unstake"} onClick={unstakeTokens}>
+        Withdraw
+      </a>
       <div className="card__amount">
         <a className={isClaiming || stakedAmount==0 ? "btn btn_claim disabled" : "btn btn_claim"} onClick={claimTokens}>
           Claim Reward

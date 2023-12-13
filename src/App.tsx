@@ -25,8 +25,8 @@ function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<Main />} />
-        <Route path="/nft_staking" element={<NftStaking />} />
-        <Route path="/leaderboard" element={<Leaderboard />} />
+        {/* <Route path="/nft_staking" element={<NftStaking />} />
+        <Route path="/leaderboard" element={<Leaderboard />} /> */}
       </Routes>
     </BrowserRouter>
   );
